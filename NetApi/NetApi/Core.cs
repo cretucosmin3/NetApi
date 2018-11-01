@@ -65,10 +65,24 @@ namespace NetApi
                 _listenOn = endpoint;
                 Client = new UdpClient(_listenOn);
             }
-            public void SendTo(string message, IPEndPoint endpoint)
+            public void SendTo(object obj, IPEndPoint endpoint)
             {
-                var datagram = Encoding.ASCII.GetBytes(message);
+                var datagram = ObjectToByteArray(obj);
                 Client.Send(datagram, datagram.Length, endpoint);
+                //var datagram = Encoding.ASCII.GetBytes(message);
+                //Client.Send(datagram, datagram.Length, endpoint);
+
+            }
+            public byte[] ObjectToByteArray(object obj)
+            {
+                if (obj == null)
+                    return null;
+                BinaryFormatter bf = new BinaryFormatter();
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    bf.Serialize(ms, obj);
+                    return ms.ToArray();
+                }
             }
 
         }
@@ -91,7 +105,7 @@ namespace NetApi
                 Client.Send(datagram, datagram.Length);
             }
 
-            byte[] ObjectToByteArray(object obj)
+            public byte[] ObjectToByteArray(object obj)
             {
                 if (obj == null)
                     return null;
