@@ -16,8 +16,7 @@ namespace NetApi
         public struct Received
         {
             public IPEndPoint Sender;
-            public string Message;
-            public object ReceivedObj;
+            public DataSent ReceivedObj;
         }
 
         // Base
@@ -36,31 +35,19 @@ namespace NetApi
                 var result = await Client.ReceiveAsync();
                 return new Received()
                 {
-                    Message = Encoding.ASCII.GetString(result.Buffer, 0, result.Buffer.Length),
-                    Sender = result.RemoteEndPoint
+                    //Message = Encoding.ASCII.GetString(content),
+                    ReceivedObj = (DataSent)ByteArrayToObject(result.Buffer)
                 };
             }
 
-            public Received ReceiveQ(IPEndPoint ip)
-            {
-                byte[] content = Client.Receive(ref ip);
-                return new Received()
-                {
-                    Sender = ip,
-                    //Message = Encoding.ASCII.GetString(content),
-                    ReceivedObj = ByteArrayToObject(content)
-                };
-            }
             // Convert a byte array to an Object
-            public Object ByteArrayToObject(byte[] arrBytes)
+            public object ByteArrayToObject(byte[] arrBytes)
             {
                 MemoryStream memStream = new MemoryStream();
                 BinaryFormatter binForm = new BinaryFormatter();
                 memStream.Write(arrBytes, 0, arrBytes.Length);
                 memStream.Seek(0, SeekOrigin.Begin);
-                Object obj = (Object)binForm.Deserialize(memStream);
-
-                return obj;
+                return binForm.Deserialize(memStream);
             }
         }
 
@@ -101,6 +88,13 @@ namespace NetApi
 
         }
 
+        [Serializable]
+        public class DataSent
+        {
+            public string Message{ get; set; }
+            public object Data { get; set; }
+        }
+
         //Client
         public class UdpUser : UdpBase
         {
@@ -112,10 +106,11 @@ namespace NetApi
                 connection.Client.Connect(hostname, port);
                 return connection;
             }
-
-            public void Send(object obj)
+            
+            public void Send(string message, object obj)
             {
-                var datagram = ObjectToByteArray(obj);
+                DataSent ToSend = new DataSent() { Message = message, Data = obj };
+                var datagram = ObjectToByteArray(ToSend);
                 Client.Send(datagram, datagram.Length);
             }
             // Convert an object to a byte array
