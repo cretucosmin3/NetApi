@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -83,12 +85,23 @@ namespace NetApi
                 return connection;
             }
 
-            public void Send(string message)
+            public void Send(object obj)
             {
-                var datagram = Encoding.ASCII.GetBytes(message);
+                var datagram = ObjectToByteArray(obj);
                 Client.Send(datagram, datagram.Length);
             }
 
+            byte[] ObjectToByteArray(object obj)
+            {
+                if (obj == null)
+                    return null;
+                BinaryFormatter bf = new BinaryFormatter();
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    bf.Serialize(ms, obj);
+                    return ms.ToArray();
+                }
+            }
         }
     }
 }
