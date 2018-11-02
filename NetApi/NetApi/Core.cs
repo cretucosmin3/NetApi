@@ -35,17 +35,18 @@ namespace NetApi
                 token.ThrowIfCancellationRequested();
                 var result = await Client.ReceiveAsync();
                 var DataR = (DataSent)Tools.ByteArrayToObject(Tools.Decompress(result.Buffer));
-                if (DataR.Checksum == Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(DataR.Message)) +
-                                        Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(DataR.Data)))
-                {
+                Console.WriteLine(DataR.Message);
+                //if (DataR.Checksum == Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(DataR.Message)) +
+                //                        Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(DataR.Data)))
+                //{
                     return new Received()
                     {
                         Sender = result.RemoteEndPoint,
                         ReceivedObj = DataR
                     };
-                }
+                //}
 
-                return new Received() { Sender = null, ReceivedObj = null };
+                //return new Received() { Sender = null, ReceivedObj = null };
             }
         }
 

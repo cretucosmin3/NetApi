@@ -32,7 +32,7 @@ namespace NetApi
                         {
                             cts = new CancellationTokenSource();
                             var received = await server.Receive(cts.Token);
-                            if(received.Sender != null && received.ReceivedObj != null)
+                            if(received.ReceivedObj != null)
                             {
                                 OnDataReceived.Invoke(received.ReceivedObj.Message, received.ReceivedObj.Data);
                             }
