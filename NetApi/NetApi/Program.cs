@@ -19,7 +19,7 @@ namespace NetApi
             if (result == DialogResult.Yes)
             {
                 string input = Microsoft.VisualBasic.Interaction.InputBox("Enter Server IP : ", "Question", "192.168.0.1", -1, -1);
-                Client cl = new Client(input, 555, "localhostClient");
+                Client cl = new Client(input, 4544, "localhostClient");
                 Task.Factory.StartNew(() =>
                 {
                     {
@@ -43,7 +43,7 @@ namespace NetApi
             }
             else
             {
-                Server sv = new Server(555);
+                Server sv = new Server(4544);
                 sv.OnDataReceived += Sv_OnDataReceived;
                 ImageCast.ShowDialog();
             }
