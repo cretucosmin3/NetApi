@@ -12,6 +12,9 @@ namespace NetApi
         public Core.UdpListener server;
         CancellationTokenSource cts;
 
+        public delegate void ReceivedMessage(string Message, object Data);
+        public event ReceivedMessage OnDataReceived;
+
         public Server(int Port)
         {
             server = new Core.UdpListener(555);
@@ -29,9 +32,9 @@ namespace NetApi
                         {
                             cts = new CancellationTokenSource();
                             var received = await server.Receive(cts.Token);
-                            if(received.ReceivedObj.Message == "fisier")
+                            if(received.Sender != null && received.ReceivedObj != null)
                             {
-                                System.IO.File.WriteAllBytes("clonafisier.txt", (byte[])received.ReceivedObj.Data);
+                                OnDataReceived.Invoke(received.ReceivedObj.Message, received.ReceivedObj.Data);
                             }
                         }
                         catch (Exception ex) { Console.WriteLine(ex.ToString()); }

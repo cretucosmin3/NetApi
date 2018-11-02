@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -33,21 +34,18 @@ namespace NetApi
             {
                 token.ThrowIfCancellationRequested();
                 var result = await Client.ReceiveAsync();
-                return new Received()
+                var DataR = (DataSent)Tools.ByteArrayToObject(Tools.Decompress(result.Buffer));
+                if (DataR.Checksum == Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(DataR.Message)) +
+                                        Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(DataR.Data)))
                 {
-                    //Message = Encoding.ASCII.GetString(content),
-                    ReceivedObj = (DataSent)ByteArrayToObject(result.Buffer)
-                };
-            }
+                    return new Received()
+                    {
+                        Sender = result.RemoteEndPoint,
+                        ReceivedObj = DataR
+                    };
+                }
 
-            // Convert a byte array to an Object
-            public object ByteArrayToObject(byte[] arrBytes)
-            {
-                MemoryStream memStream = new MemoryStream();
-                BinaryFormatter binForm = new BinaryFormatter();
-                memStream.Write(arrBytes, 0, arrBytes.Length);
-                memStream.Seek(0, SeekOrigin.Begin);
-                return binForm.Deserialize(memStream);
+                return new Received() { Sender = null, ReceivedObj = null };
             }
         }
 
@@ -65,25 +63,18 @@ namespace NetApi
                 _listenOn = endpoint;
                 Client = new UdpClient(_listenOn);
             }
-            public void SendTo(object obj, IPEndPoint endpoint)
+            public void SendTo(string msg,object obj, IPEndPoint endpoint)
             {
-                var datagram = ObjectToByteArray(obj);
-                Client.Send(datagram, datagram.Length, endpoint);
-                //var datagram = Encoding.ASCII.GetBytes(message);
-                //Client.Send(datagram, datagram.Length, endpoint);
-
-            }
-            // Convert an object to a byte array
-            public byte[] ObjectToByteArray(object obj)
-            {
-                if (obj == null)
-                    return null;
-                BinaryFormatter bf = new BinaryFormatter();
-                using (MemoryStream ms = new MemoryStream())
+                DataSent ToSend = new DataSent()
                 {
-                    bf.Serialize(ms, obj);
-                    return ms.ToArray();
-                }
+                    Message = msg,
+                    Data = obj,
+                    Checksum = Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(msg)) +
+                                Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(obj))
+                };
+                var datagram = Tools.Compress(Tools.ObjectToByteArray(ToSend));
+                Client.Send(datagram, datagram.Length, endpoint);
+
             }
 
         }
@@ -93,6 +84,7 @@ namespace NetApi
         {
             public string Message{ get; set; }
             public object Data { get; set; }
+            public int Checksum { get; set; }
         }
 
         //Client
@@ -109,12 +101,23 @@ namespace NetApi
             
             public void Send(string message, object obj)
             {
-                DataSent ToSend = new DataSent() { Message = message, Data = obj };
-                var datagram = ObjectToByteArray(ToSend);
+                DataSent ToSend = new DataSent()
+                {
+                    Message = message,
+                    Data = obj,
+                    Checksum = Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(message)) +
+                                Tools.ComputeAdditionChecksum(Tools.ObjectToByteArray(obj))
+                };
+                var datagram = Tools.Compress(Tools.ObjectToByteArray(ToSend));
                 Client.Send(datagram, datagram.Length);
             }
+            
+        }
+
+        public static class Tools
+        {
             // Convert an object to a byte array
-            public byte[] ObjectToByteArray(object obj)
+            public static byte[] ObjectToByteArray(object obj)
             {
                 if (obj == null)
                     return null;
@@ -125,6 +128,51 @@ namespace NetApi
                     return ms.ToArray();
                 }
             }
+
+            // Convert a byte array to an Object
+            public static object ByteArrayToObject(byte[] arrBytes)
+            {
+                MemoryStream memStream = new MemoryStream();
+                BinaryFormatter binForm = new BinaryFormatter();
+                memStream.Write(arrBytes, 0, arrBytes.Length);
+                memStream.Seek(0, SeekOrigin.Begin);
+                return binForm.Deserialize(memStream);
+            }
+
+            public static byte[] Compress(byte[] data)
+            {
+                MemoryStream output = new MemoryStream();
+                using (DeflateStream dstream = new DeflateStream(output, CompressionLevel.Optimal))
+                {
+                    dstream.Write(data, 0, data.Length);
+                }
+                return output.ToArray();
+            }
+
+            public static byte[] Decompress(byte[] data)
+            {
+                MemoryStream input = new MemoryStream(data);
+                MemoryStream output = new MemoryStream();
+                using (DeflateStream dstream = new DeflateStream(input, CompressionMode.Decompress))
+                {
+                    dstream.CopyTo(output);
+                }
+                return output.ToArray();
+            }
+
+            public static byte ComputeAdditionChecksum(byte[] data)
+            {
+                byte sum = 0;
+                unchecked // Let overflow occur without exceptions
+                {
+                    foreach (byte b in data)
+                    {
+                        sum += b;
+                    }
+                }
+                return sum;
+            }
         }
+
     }
 }
