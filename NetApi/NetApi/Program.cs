@@ -13,7 +13,7 @@ namespace NetApi
         static void Main(string[] args)
         {
             Server sv = new Server(555);
-            Client cl = new Client("192.168.0.7", 555, "jeorje");
+            Client cl = new Client("127.0.0.1", 555, "localhostClient");
             
 
             var FileToSend = File.ReadAllBytes(@"C:\Users\Cosmin\Desktop\UClient.txt");
